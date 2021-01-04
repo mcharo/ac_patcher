@@ -1,37 +1,37 @@
 # ac_patcher
-AnyConnect Patcher for Freedom
 
-## Backstory
-I got tired of AnyConnect always stealing/locking my route tables, especially after I started to use more containerization. It just got really frustrating to need to continually disconnect/reconnect, and/or hit up the systems admin person (me) to change the VPN side of things.
+AnyConnect Route Table Patch for macOS (adapted from [Garrett Skjelstad's code](https://github.com/garrettskj/ac_patcher))
 
 ## How it works
-The AnyConnect Linux Binary uses the following C++ method: ``CHostConfigMgr::StartInterfaceAndRouteMonitoring()``
+
+The AnyConnect macOS Binary uses the following C++ method: `CHostConfigMgr::StartInterfaceAndRouteMonitoring()`
+
 The following python script finds that method, then backtracks to where that method is being called from, and then NOPs out that call.
+
 Since each version of AnyConnect this memory address will change, I needed something that would do this process automatically, hence the scripting of radare2.
 
-## How to use it.
-Install AnyConnect
+## How to use it
 
-Install dependancies:
+1. Install AnyConnect
+2. Install dependencies:
 
+    ```bash
+    brew install radare2
+    python -m pip install r2pipe
+    ```
+
+## Run the patcher
+
+This will stop the system service, disassemble the binary looking for the methods, and patch it out and then restart the service.
+
+You'll need to `sudo` this for elevated privileges, because the default installation directory `/opt/cisco/anyconnect/` requires elevated privileges for writing
+
+```bash
+sudo ./anyconnect_patcher.py -f /opt/cisco/anyconnect/bin/vpnagentd
 ```
-apt install radare2
-pip3 install r2pipe
-```
 
-## Run the patcher.
-This will stop the system service, dissassemble the binary looking for the methods, and patch it out and then restart the service.
-You'll need to ``sudo`` this for elevated privileges, due to the following:
-1. the default installation directory ``/opt/cisco/anyconnect/`` requires elevated privileges for writing
-1. stopping/starting the vpnagentd service requires service management privs.
+## Version Compatibility
 
-```
-sudo ./anyconnect_patcher.sh
-```
-
-## Version Compatibility:
 Tested / Confirmed with:
-- 4.9.00086
-- 4.9.01095
-- 4.9.02028 (Unable to test, Mac only)_
-- 4.9.0304x
+
+- 4.7.00136 (macOS Catalina 10.15.5)

@@ -1,25 +1,26 @@
 #!/bin/bash
 
-USERNAME=vpnuser
-TWOFA=true
-PIN=1234
-VPN_ENDPOINT="vpn.someplace.com"
+USERNAME=$(whoami)
+VPN_ENDPOINT="vpn.somewhere.com"
+GROUP=${1:-0}
+CISCO_PATH="$(dirname $(find /opt/cisco -depth -name vpnagentd))"
 
-if [ "$TWOFA" = true ] ; then
-  LOGINSTR="0\n$USERNAME\n$PIN$1\n"
+if [[ "$GROUP" == "-d" ]]; then
+    $CISCO_PATH/vpn disconnect
 else
-  LOGINSTR="0\n$USERNAME\n$1\n"
+    echo "Connecting to $VPN_ENDPOINT, profile $GROUP, as $USERNAME"
+
+    # TODO detail rsacli usage and rsapin convention
+    PIN=$($(which security) find-generic-password -wl "rsapin")
+    CODE=$(rsacli)
+    LOGINSTR="$GROUP\n$USERNAME\n$PIN$CODE\n"
+
+    echo -e $LOGINSTR > /tmp/answers.txt
+
+    # make sure the anyconnect daemon is running
+    [ $(pgrep vpnagentd) ] || $CISCO_PATH/vpnagentd
+
+    # connect
+    $CISCO_PATH/vpn -s < /tmp/answers.txt connect $VPN_ENDPOINT
+    rm -f /tmp/answers.txt
 fi
-
-# put the answers in a tmp file (TODO: fix this)
-echo -e $LOGINSTR > /tmp/answers.txt
-
-# find the path to the anyconnect executables
-ciscopath="$(dirname $(find /opt/cisco -depth -name vpnagentd))"
-
-# make sure the anyconnect daemon is running
-[ $(pidof vpnagentd) ] || $ciscopath/vpnagentd
-
-# connect
-echo $ciscopath
-$ciscopath/vpn -s < /tmp/answers.txt connect $VPN_ENDPOINT
